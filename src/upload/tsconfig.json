@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@domain/*": ["./upload/domain/*"],
+      "@application/*": ["./upload/application/*"],
+      "@infrastructure/*": ["./upload/infrastructure/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}
