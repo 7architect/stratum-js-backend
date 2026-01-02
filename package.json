@@ -1,0 +1,38 @@
+{
+  "name": "backend-fastify",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10",
+    "type-fest": "^5.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@adminjs/fastify": "^4.2.0",
+    "@adminjs/mongoose": "^4.1.0",
+    "@aws-sdk/client-s3": "^3.958.0",
+    "@aws-sdk/lib-storage": "^3.958.0",
+    "@aws-sdk/s3-request-presigner": "^3.958.0",
+    "@fastify/swagger": "^9.6.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "adminjs": "^7.8.17",
+    "argon2": "^0.44.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.2",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "pino-pretty": "^11.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mitt": "^3.0.1",
+    "mongodb": "^7.0.0",
+    "mongoose": "^9.0.2",
+    "fastify-type-provider-zod": "^6.1.0",
+    "zod": "^4.3.4",
+    "uuid": "^13.0.0",
+    "winston": "^3.19.0"
+  }
+}

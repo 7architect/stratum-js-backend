@@ -1,0 +1,13 @@
+[install]
+peer = true
+
+[test]
+preload = ["./src/test-setup.ts"]
+
+# Path aliases
+[run]
+preload = []
+
+# This tells Bun to use tsconfig.json paths
+[module]
+prefer = "bun"
