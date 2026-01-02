@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { UploadIntentServiceFacade } from '@infra/facade/upload-intent-service.facade'
+import { UploadIntentServiceFacade } from '@/infrastructure/facade/upload-intent-service.facade'
 import { printIntentResult } from '../renderers/intent-renderer'
 
 type GetIntentOptions = {

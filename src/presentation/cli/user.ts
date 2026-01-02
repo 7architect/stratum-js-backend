@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { Command } from 'commander'
-import { initializeDatabase } from '@infra/adapters/mongo'
+import { initializeDatabase } from '@/infrastructure/adapters/mongo'
 import { runCli } from './utils/runner'
 import { createUserCommand } from './commands/user-create.command'
 import { findUserCommand } from './commands/user-find.command'

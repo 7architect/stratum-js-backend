@@ -11,7 +11,7 @@ export class UserServiceFactory {
     return new UserService(eventBus, userRepo)
   }
 
-  static createWithExternalRepo(eventBus: EventBusPort, userRepo: UserRepoPort): UserServicePort {
+  static withExternalRepo(eventBus: EventBusPort, userRepo: UserRepoPort): UserServicePort {
     return new UserService(eventBus, userRepo)
   }
 }

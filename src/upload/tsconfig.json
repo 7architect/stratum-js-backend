@@ -6,6 +6,7 @@
       "@domain/*": ["./upload/domain/*"],
       "@application/*": ["./upload/application/*"],
       "@infrastructure/*": ["./upload/infrastructure/*"],
+      "@presentation/*": ["./upload/presentation/*"],
       "@shared/*": ["./shared/*"]
     }
   }

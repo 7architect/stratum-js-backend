@@ -1,4 +1,4 @@
-import { type User } from "@domain/entities/user.entity"
+import { type UserDTO } from "@presentation/dto/user.dto"
 import { type UserRepoPort } from "@application/ports/user-repository.port"
 import { type EventBusPort } from "@application/ports/event-bus.port"
 import { type Allowance } from "@domain/value-objects/allowance.value-object"
@@ -19,21 +19,21 @@ export abstract class UserServicePort {
     this.userRepo = userRepo
   }
 
-  abstract create(email: string, password: string): Promise<User>
+  abstract create(email: string, password: string): Promise<UserDTO>
 
-  abstract updateUser(id: string, userData: Partial<User>): Promise<User>
-  abstract deleteUser(id: string): Promise<User>
-  abstract findById(id: string): Promise<User | null>
-  abstract findByEmail(email: string): Promise<User | null>
+  abstract updateUser(id: string, userData: Partial<any>): Promise<UserDTO>
+  abstract deleteUser(id: string): Promise<UserDTO>
+  abstract findById(id: string): Promise<UserDTO | null>
+  abstract findByEmail(email: string): Promise<UserDTO | null>
   abstract findAll(page: number, perPage: number): Promise<{
-    users: User[],
+    users: UserDTO[],
     total: number
   }>
 
-  abstract revokeLicense(id: string): Promise<User>
-  abstract restoreLicense(id: string): Promise<User>
+  abstract revokeLicense(id: string): Promise<UserDTO>
+  abstract restoreLicense(id: string): Promise<UserDTO>
 
-  abstract assignAllowances(id: string, allowances: Allowance[]): Promise<User>
-  abstract revokeAllowances(id: string, allowanceCodes: Allowance['code'][]): Promise<User>
-  abstract consumeAllowances(id: string, allowanceCodes: Allowance['code'][], quantities: number[]): Promise<User>
+  abstract assignAllowances(id: string, allowances: Allowance[]): Promise<UserDTO>
+  abstract revokeAllowances(id: string, allowanceCodes: Allowance['code'][]): Promise<UserDTO>
+  abstract consumeAllowances(id: string, allowanceCodes: Allowance['code'][], quantities: number[]): Promise<UserDTO>
 }

@@ -1,8 +1,9 @@
 import { Command } from 'commander'
-import { UserServiceFacade } from '@infra/facade/user-service.facade'
+import { UserServiceFacade } from '@/infrastructure/facade/user-service.facade'
 import { parseNumberOption } from '../utils/format'
 import { printMessageTable } from '../utils/table'
 import { printUsersTable } from '../renderers/user-renderer'
+import type { UserDTO } from '@/users/presentation/dto/user.dto'
 
 type ListOptions = {
   page: string
@@ -20,7 +21,7 @@ export function listUsersCommand(): Command {
       const pageNumber = parseNumberOption(page, 1)
       const perPageNumber = parseNumberOption(perPage, 10)
 
-      const result = await UserServiceFacade.getInstance().findAll(pageNumber, perPageNumber)
+      const result: { users: UserDTO[], total: number } = await UserServiceFacade.getInstance().findAll(pageNumber, perPageNumber)
 
       printMessageTable(`Users list (page ${pageNumber}, perPage ${perPageNumber}, total ${result.total})`)
       printUsersTable(result.users)

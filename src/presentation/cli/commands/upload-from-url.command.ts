@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { UploadServiceFacade } from '@infra/facade/upload-service.facade'
+import { UploadServiceFacade } from '@/infrastructure/facade/upload-service.facade'
 import { printUploadResult } from '../renderers/upload-renderer'
 
 type UploadFromUrlOptions = {

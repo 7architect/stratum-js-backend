@@ -1,7 +1,8 @@
 import { Command } from 'commander'
-import { UserServiceFacade } from '@infra/facade/user-service.facade'
-import { AuthServiceFacade } from '@infra/facade/auth-service.facade'
+import { UserServiceFacade } from '@/infrastructure/facade/user-service.facade'
+import { AuthServiceFacade } from '@/infrastructure/facade/auth-service.facade'
 import { printUserResult } from '../renderers/user-renderer'
+import type { UserDTO } from '@/users/presentation/dto/user.dto'
 
 type CreateOptions = {
   email: string
@@ -17,7 +18,7 @@ export function createUserCommand(): Command {
       const { email, password } = options
       const authService = AuthServiceFacade.getInstance()
       const passwordHash = await authService.generatePasswordHash(password)
-      const user = await UserServiceFacade.getInstance().create(email, passwordHash)
-      printUserResult('User created', user)
+      const userDto: UserDTO = await UserServiceFacade.getInstance().create(email, passwordHash)
+      printUserResult('User created', userDto)
     })
 }

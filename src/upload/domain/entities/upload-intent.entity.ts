@@ -1,7 +1,5 @@
 import { randomUUID } from 'crypto'
 
-import { UploadFileEntity } from './upload-file.entity'
-
 export class UploadIntentEntity {
   private constructor(
     public readonly id: string,
@@ -12,8 +10,9 @@ export class UploadIntentEntity {
     public readonly sizeLimit: number | null,
     public readonly mimeType: string | null,
     public uploadedFileId: string | null,
-    public uploadedFileUri: string | null,
     public usedAt: Date | null,
+    public actualSize: number | null,
+    public actualMimeType: string | null,
   ) {}
 
   static create(params: {
@@ -24,14 +23,17 @@ export class UploadIntentEntity {
     sizeLimit?: number | null
     mimeType?: string | null
   }): UploadIntentEntity {
+    const id = randomUUID()
+    const uploadedFileId = randomUUID() // Generate file ID for future upload
     return new UploadIntentEntity(
-      randomUUID(),
+      id,
       params.key,
       params.presignedUrl,
       params.presignedUrlExpiresAt,
       params.expiresAt,
       params.sizeLimit ?? null,
       params.mimeType ?? null,
+      uploadedFileId, // Set the generated file ID
       null,
       null,
       null,
@@ -50,14 +52,26 @@ export class UploadIntentEntity {
     this.expiresAt = new Date()
   }
 
-  assignUpload(file: UploadFileEntity): void {
+  confirm(actualSize: number, actualMimeType: string): void {
     if (this.isUsed) {
       throw new Error('Upload intent already used')
     }
 
+    if (this.isExpired) {
+      throw new Error('Upload intent has expired')
+    }
+
+    if (this.sizeLimit !== null && actualSize > this.sizeLimit) {
+      throw new Error('File exceeds allowed size for this upload intent')
+    }
+
+    if (this.mimeType !== null && this.mimeType !== actualMimeType) {
+      throw new Error('File mime type is not allowed for this upload intent')
+    }
+
     this.usedAt = new Date()
-    this.uploadedFileId = file.id
-    this.uploadedFileUri = file.uri
+    this.actualSize = actualSize
+    this.actualMimeType = actualMimeType
   }
 
   get isPresignedUrlExpired(): boolean {

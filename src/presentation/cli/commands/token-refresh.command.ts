@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { AuthServiceFacade } from '@infra/facade/auth-service.facade'
+import { AuthServiceFacade } from '@/infrastructure/facade/auth-service.facade'
 import { RefreshToken } from '@auth/domain/value-objects/refresh-token.value-object'
 import { ensureDate } from '../utils/format'
 import { printTokens } from '../renderers/token-renderer'

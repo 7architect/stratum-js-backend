@@ -1,76 +1,83 @@
 import { randomUUID } from 'crypto'
 import { UploadIntentEntity } from '@domain/entities/upload-intent.entity'
 import { UploadFileEntity } from '@domain/entities/upload-file.entity'
-import { type UploadServicePort } from '@application/ports/upload-service.port'
 import { type UploadAdapterPort } from '@application/ports/upload-adapter.port'
 import { type UploadIntentServicePort, type CreateUploadIntentOptions } from '@application/ports/upload-intent.service'
+import { type EventBusPort } from '@application/ports/event-bus.port'
+import { type UploadServicePort } from '@application/ports/upload-service.port'
+import { UploadIntentConfirmedIntegrationEvent } from '@application/integration-events'
 
 export class UploadIntentService implements UploadIntentServicePort {
   private intents: Map<string, UploadIntentEntity> = new Map()
 
   constructor(
-    private readonly uploadService: UploadServicePort,
-    private readonly uploadAdapter: UploadAdapterPort
+    private readonly eventBus: EventBusPort,
+    private readonly uploadAdapter: UploadAdapterPort,
+    private readonly uploadService: UploadServicePort
   ) {}
 
   async createIntent(options: CreateUploadIntentOptions): Promise<UploadIntentEntity> {
     const expiresAt = options.expiresAt ?? null
+    const fileId = randomUUID() // Generate file ID first
 
-    // Generate presigned URL for upload FIRST
     const key = `intent-uploads/${randomUUID()}/${Date.now()}`
-    const presignedUrl = await this.uploadAdapter.generatePresignedUrl(key, 3600) // 1 hour
-    const presignedUrlExpiresAt = new Date(Date.now() + 3600 * 1000)
+    const presignedUrlVO = await this.uploadAdapter.generatePresignedUrl(key, fileId, 3600) // 1 hour
 
     const intent = UploadIntentEntity.create({
       key,
-      presignedUrl,
-      presignedUrlExpiresAt,
+      presignedUrl: presignedUrlVO.url,
+      presignedUrlExpiresAt: presignedUrlVO.expiresAt,
       expiresAt,
       sizeLimit: options.sizeLimit ?? null,
       mimeType: options.mimeType ?? null,
     })
 
     this.intents.set(intent.id, intent)
+
+    // No event published for intent creation (internal-only operation)
+
     return intent
   }
 
-  async uploadFileWithIntent(intentId: string, file: File): Promise<{ intent: UploadIntentEntity; file: UploadFileEntity }> {
+  async validateIntent(intentId: string): Promise<void> {
     const intent = this.requireIntent(intentId)
     this.ensureIntentActive(intent)
-
-    if (intent.sizeLimit !== null && file.size > intent.sizeLimit) {
-      throw new Error('File exceeds allowed size for this upload intent')
-    }
-
-    if (intent.mimeType !== null && file.type && intent.mimeType !== file.type) {
-      throw new Error('File mime type is not allowed for this upload intent')
-    }
-
-    const uploadedFile = await this.uploadService.uploadFile(file)
-    intent.assignUpload(uploadedFile)
-
-    return { intent, file: uploadedFile }
   }
 
-  async uploadFileFromUrlWithIntent(intentId: string, url: string): Promise<{ intent: UploadIntentEntity; file: UploadFileEntity }> {
+  async confirmIntent(intentId: string): Promise<UploadIntentEntity> {
     const intent = this.requireIntent(intentId)
     this.ensureIntentActive(intent)
 
-    const uploadedFile = await this.uploadService.uploadFileFromUrl(url)
-
-    if (intent.sizeLimit !== null && uploadedFile.size > intent.sizeLimit) {
-      await this.uploadService.deleteFile(uploadedFile)
-      throw new Error('File exceeds allowed size for this upload intent')
+    // Get file metadata from S3 (includes ID from metadata)
+    const metadata = await this.uploadAdapter.getFileMetadata(intent.key)
+    if (!metadata) {
+      throw new Error('File not found in storage')
     }
 
-    if (intent.mimeType !== null && uploadedFile.mimeType !== intent.mimeType) {
-      await this.uploadService.deleteFile(uploadedFile)
-      throw new Error('File mime type is not allowed for this upload intent')
-    }
+    // Validate and confirm intent
+    intent.confirm(metadata.size, metadata.mimeType)
 
-    intent.assignUpload(uploadedFile)
+    // Create UploadFileEntity with ID from S3 metadata and track it
+    const uploadFile = UploadFileEntity.create({
+      id: metadata.id, // Use ID from S3 metadata
+      storageKey: intent.key,
+      size: metadata.size,
+      mimeType: metadata.mimeType,
+      originalName: metadata.originalName,
+      originalExtension: metadata.originalExtension,
+      assetType: metadata.assetType ?? null,
+      customMetadata: metadata.customMetadata ?? {},
+      lastModified: metadata.lastModified,
+    })
 
-    return { intent, file: uploadedFile }
+    // Track upload - this will publish FileUploadedIntegrationEvent
+    const uploadDto = await this.uploadService.trackUpload(uploadFile)
+
+    // Publish UploadIntentConfirmedIntegrationEvent with the upload DTO as payload
+    const event = new UploadIntentConfirmedIntegrationEvent(uploadDto)
+    await this.eventBus.publish(event)
+
+    return intent
   }
 
   async getIntent(intentId: string): Promise<UploadIntentEntity | null> {

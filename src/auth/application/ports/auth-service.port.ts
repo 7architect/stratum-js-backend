@@ -9,12 +9,19 @@ export abstract class AuthServicePort {
      protected passwordManager: PasswordManagerPort
    ) {}
 
-   abstract issueTokens(sub: string): {
+   abstract issueTokens(sub: string, payloadExtra: Record<string, any>): {
     accessToken: AccessToken
     refreshToken: RefreshToken
    }
 
-   abstract refreshTokens(refreshToken: RefreshToken, sub: string): {
+   abstract verifyToken(token: string): {
+    sub: string
+    exp: number
+   }
+
+   abstract decodeToken<T extends { sub: string, [key:string]: any }>(token: string): T
+
+   abstract refreshTokens(refreshToken: RefreshToken, sub: string, payloadExtra: Record<string, any>): {
     accessToken: AccessToken
     refreshToken: RefreshToken
    }

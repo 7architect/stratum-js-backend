@@ -17,13 +17,12 @@
       "@root/*": ["src/*"],
       "@users/*": ["src/users/*"],
       "@auth/*": ["src/auth/*"],
-      "@shared/*": ["src/shared/*"],
-      "@infra/*": ["src/infra/*"],
-      "@config/*": ["src/config/*"],
-      "@utils/*": ["src/utils/*"],
-      "@presentation/*": ["src/presentation/*"],
       "@upload/*": ["src/upload/*"],
-      "@application/*": ["src/application/*"]
+      "@shared/*": ["src/shared/*"],
+      "@infrastructure/*": ["src/infrastructure/*"],
+      "@config/*": ["src/config/*"],
+      "@presentation/*": ["src/presentation/*"],
+      "@application/*": ["src/application/*"],
     },
 
     "strict": true,

@@ -1,41 +1,22 @@
 import { Command } from 'commander'
-import { UploadServiceFacade } from '@infra/facade/upload-service.facade'
-import { UploadFileEntity } from '@upload/domain/entities/upload-file.entity'
+import { UploadServiceFacade } from '@/infrastructure/facade/upload-service.facade'
 import { printUploadResult } from '../renderers/upload-renderer'
-
-type DeleteUploadOptions = {
-  id: string
-  uri: string
-  size: string
-  mimeType: string
-  storageKey: string
-  createdAt: string
-  uploadedAt?: string
-}
 
 export function deleteUploadCommand(): Command {
   return new Command('delete')
-    .description('Delete uploaded file')
-    .requiredOption('--id <id>', 'File ID')
-    .requiredOption('--uri <uri>', 'File URI')
-    .requiredOption('--size <size>', 'File size in bytes')
-    .requiredOption('--mime-type <mimeType>', 'File MIME type')
-    .requiredOption('--storage-key <storageKey>', 'Storage key')
-    .requiredOption('--created-at <createdAt>', 'Created at (ISO 8601)')
-    .option('--uploaded-at <uploadedAt>', 'Uploaded at (ISO 8601)')
-    .action(async (options: DeleteUploadOptions) => {
-      const file = UploadFileEntity.fromPersistence({
-        id: options.id,
-        uri: options.uri,
-        size: Number.parseInt(options.size, 10),
-        mimeType: options.mimeType,
-        storageKey: options.storageKey,
-        createdAt: new Date(options.createdAt),
-        uploadedAt: options.uploadedAt ? new Date(options.uploadedAt) : null,
-        deletedAt: null,
-      })
-
-      const deletedFile = await UploadServiceFacade.getInstance().deleteFile(file)
-      printUploadResult('File deleted', deletedFile)
+    .description('Delete uploaded file by storage key')
+    .requiredOption('--key <key>', 'Storage key')
+    .action(async (options: { key: string }) => {
+      try {
+        const deletedFile = await UploadServiceFacade.getInstance().deleteFileByKey(options.key)
+        if (deletedFile) {
+          printUploadResult('File deleted', deletedFile)
+        } else {
+          console.log(`File with key '${options.key}' not found`)
+        }
+      } catch (error) {
+        console.error('Failed to delete file:', error instanceof Error ? error.message : error)
+        process.exit(1)
+      }
     })
 }

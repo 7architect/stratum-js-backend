@@ -1,5 +1,4 @@
 import { UploadIntentEntity } from '@domain/entities/upload-intent.entity'
-import { UploadFileEntity } from '@domain/entities/upload-file.entity'
 
 export type CreateUploadIntentOptions = {
   expiresAt?: Date | null
@@ -10,15 +9,9 @@ export type CreateUploadIntentOptions = {
 export interface UploadIntentServicePort {
   createIntent(options: CreateUploadIntentOptions): Promise<UploadIntentEntity>
 
-  uploadFileWithIntent(intentId: string, file: File): Promise<{
-    intent: UploadIntentEntity
-    file: UploadFileEntity
-  }>
+  validateIntent(intentId: string): Promise<void>
 
-  uploadFileFromUrlWithIntent(intentId: string, url: string): Promise<{
-    intent: UploadIntentEntity
-    file: UploadFileEntity
-  }>
+  confirmIntent(intentId: string): Promise<UploadIntentEntity>
 
   getIntent(intentId: string): Promise<UploadIntentEntity | null>
 }

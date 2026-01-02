@@ -1,27 +1,28 @@
+import { UploadDto } from '@upload/presentation/upload.dto'
 import { UploadFileEntity } from '@upload/domain/entities/upload-file.entity'
-import { createTable, printMessageTable } from '../utils/table'
+import { printMessageTable, createAdaptiveTable } from '../utils/table'
 import { formatDate } from '../utils/format'
+import { makeClickable } from '../utils/terminal'
 
-const UPLOAD_TABLE_HEADERS = ['ID', 'URI', 'Size (bytes)', 'MIME Type', 'Storage Key', 'Created', 'Uploaded', 'Deleted'] as const
-const UPLOAD_TABLE_COL_WIDTHS = [38, 50, 15, 20, 40, 18, 18, 18] as const
+const UPLOAD_TABLE_HEADERS = ['ID', 'Size (bytes)', 'MIME Type', 'Storage Key', 'Created', 'Deleted'] as const
 
-export function printUploadsTable(files: UploadFileEntity[]): void {
+type UploadRecord = UploadDto | UploadFileEntity
+
+export function printUploadsTable(files: UploadRecord[]): void {
   if (!files.length) {
     printMessageTable('No uploads found')
     return
   }
 
-  const table = createTable(UPLOAD_TABLE_HEADERS, UPLOAD_TABLE_COL_WIDTHS)
+  const table = createAdaptiveTable(UPLOAD_TABLE_HEADERS)
 
   files.forEach(file => {
     table.push([
       file.id,
-      file.uri,
       file.size.toString(),
       file.mimeType,
-      file.storageKey,
+      makeClickable(file.storageKey),
       formatDate(file.createdAt),
-      formatDate(file.uploadedAt),
       formatDate(file.deletedAt),
     ])
   })
@@ -29,7 +30,7 @@ export function printUploadsTable(files: UploadFileEntity[]): void {
   console.log(table.toString())
 }
 
-export function printUploadResult(title: string, file: UploadFileEntity | null): void {
+export function printUploadResult(title: string, file: UploadRecord | null): void {
   printMessageTable(title)
   if (file) {
     printUploadsTable([file])

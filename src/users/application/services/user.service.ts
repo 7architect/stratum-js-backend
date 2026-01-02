@@ -6,6 +6,13 @@ import { type EventBusPort } from '@application/ports/event-bus.port'
 import { type UserRepoPort } from '@application/ports/user-repository.port'
 import { type Allowance } from '@domain/value-objects/allowance.value-object'
 import { UserRepoMongoAdapter } from '@infrastructure/adapters/user-repo-mongo.adatper'
+import { UserDTO } from '@presentation/dto/user.dto'
+import {
+  UserCreatedIntegrationEvent,
+  UserDeletedIntegrationEvent,
+  UserLicenseChangedIntegrationEvent,
+  UserAllowancesChangedIntegrationEvent
+} from '@application/integration-events'
 
 export class UserService extends UserServicePort {
   constructor(
@@ -20,64 +27,89 @@ export class UserService extends UserServicePort {
     return new UserService(eventBus, userRepo)
   }
 
-  private publishEvents(user: User) {
-    const events = user.getUncommittedEvents()
-    this.eventBus.publishAll(events)
+  private mapToDTO(user: User): UserDTO {
+    return UserDTO.fromEntity(user)
   }
 
-  async create(email: string, password: string) {
+  async create(email: string, password: string): Promise<UserDTO> {
     const user = User.create({ email: new Email(email), password })
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserCreatedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async updateUser(id: string, userData: Partial<User>): Promise<User> {
+  async updateUser(id: string, userData: Partial<User>): Promise<UserDTO> {
     const user = await this.userRepo.update(id, userData)
-    return user
+    return this.mapToDTO(user)
   }
 
-  async deleteUser(id: string): Promise<User> {
+  async deleteUser(id: string): Promise<UserDTO> {
     const user = await this.userRepo.delete(id)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserDeletedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async findAll(page: number, perPage: number): Promise<{ users: User[], total: number }> {
-    return await this.userRepo.findAll(page, perPage)
+  async findAll(page: number, perPage: number): Promise<{ users: UserDTO[], total: number }> {
+    const result = await this.userRepo.findAll(page, perPage)
+    return {
+      users: result.users.map(user => this.mapToDTO(user)),
+      total: result.total
+    }
   }
 
-  async findById(id: string) {
-    return await this.userRepo.findById(id)
+  async findById(id: string): Promise<UserDTO | null> {
+    const user = await this.userRepo.findById(id)
+    return user ? this.mapToDTO(user) : null
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.userRepo.findByEmail(new Email(email))
+  async findByEmail(email: string): Promise<UserDTO | null> {
+    const user = await this.userRepo.findByEmail(new Email(email))
+    return user ? this.mapToDTO(user) : null
   }
 
-  async restoreLicense(id: string): Promise<User> {
+  async restoreLicense(id: string): Promise<UserDTO> {
     const user = await this.userRepo.findById(id)
     if (!user) {
       throw new Error('User not found')
     }
     user.acceptLicense()
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserLicenseChangedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async revokeLicense(id: string): Promise<User> {
+  async revokeLicense(id: string): Promise<UserDTO> {
     const user = await this.userRepo.findById(id)
     if (!user) {
       throw new Error('User not found')
     }
     user.revokeLicenseAcceptance()
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserLicenseChangedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async revokeAllowances(id: string, allowanceCodes: Allowance['code'][]): Promise<User> {
+  async revokeAllowances(id: string, allowanceCodes: Allowance['code'][]): Promise<UserDTO> {
     const user = await this.userRepo.findById(id)
     if (!user) {
       throw new Error('User not found')
@@ -88,11 +120,16 @@ export class UserService extends UserServicePort {
     }
 
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserAllowancesChangedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async assignAllowances(id: string, allowances: Allowance[]): Promise<User> {
+  async assignAllowances(id: string, allowances: Allowance[]): Promise<UserDTO> {
     const user = await this.userRepo.findById(id)
     if (!user) {
       throw new Error('User not found')
@@ -101,23 +138,36 @@ export class UserService extends UserServicePort {
     for (const allowance of allowances) {
       user.addAllowance(allowance)
     }
+
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserAllowancesChangedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 
-  async consumeAllowances(id: string, allowanceCodes: Allowance['code'][], quantities: number[]): Promise<User> {
+  async consumeAllowances(id: string, allowanceCodes: Allowance['code'][], quantities: number[]): Promise<UserDTO> {
     const user = await this.userRepo.findById(id)
     if (!user) {
       throw new Error('User not found')
     }
 
-    for (const code of allowanceCodes) {
-      user.consumeAllowance(code, quantities.shift()!)
+    for (let i = 0; i < allowanceCodes.length; i++) {
+      const code = allowanceCodes[i]
+      const quantity = quantities[i] || 1
+      user.consumeAllowance(code, quantity)
     }
 
     await this.userRepo.save(user)
-    this.publishEvents(user)
-    return user
+
+    // Create and publish Integration Event
+    const userDto = this.mapToDTO(user)
+    const event = new UserAllowancesChangedIntegrationEvent(userDto)
+    await this.eventBus.publish(event)
+
+    return userDto
   }
 }

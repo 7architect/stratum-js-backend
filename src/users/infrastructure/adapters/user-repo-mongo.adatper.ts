@@ -4,7 +4,7 @@ import { User } from '@domain/entities/user.entity'
 import { Email } from '@domain/value-objects/email.value-object'
 import { Allowance } from '@domain/value-objects/allowance.value-object'
 
-interface AllowanceDocument {
+interface AllowanceDocument extends Document {
   code: string
   quantity: number
   isUnlimited: boolean
@@ -143,14 +143,17 @@ export class UserRepoMongoAdapter extends UserRepoPort {
   }
 
   async delete(id: string): Promise<User> {
-    const user = await this.findById(id)
+    const user = await this.UserModel.findById(id)
     if (!user) {
       throw new Error(`User with id ${id} not found`)
     }
 
-    user.delete()
-    await this.save(user)
-    return user
+    const originalEntity = this.mapDocumentToUser(user)
+
+    user.deletedAt = new Date()
+    await user.save()
+
+    return originalEntity
   }
 
   async findAll(page: number, perPage: number): Promise<{ users: User[]; total: number }> {

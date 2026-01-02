@@ -1,37 +1,46 @@
-import type { User } from "@domain/entities/user.entity";
+import type { User } from '@domain/entities/user.entity'
+import type { Allowance } from '@domain/value-objects/allowance.value-object'
 
-export class AllowanceDTOShape {
+export class UserAllowanceDTO {
   constructor(
-    public code: string,
-    public expiresIn: number,
-    public isUnlimited: boolean,
-    public quantityTotal: number,
-    public quantityRemaining: number
+    public readonly code: string,
+    public readonly expiresAt: number | null,
+    public readonly quantityTotal: number,
+    public readonly quantityRemaining: number,
+    public readonly unlimited: boolean
   ) {}
+
+  static fromAllowance(allowance: Allowance) {
+    return new UserAllowanceDTO(
+      allowance.allowanceCode,
+      allowance.allowanceExpiresAt?.getTime() ?? null,
+      allowance.totalQuantity,
+      allowance.remainingQuantity,
+      allowance.isUnlimited
+    )
+  }
 }
 
 export class UserDTO {
   constructor(
-    public id: string,
-    public allowances: AllowanceDTOShape[],
-    public email: string,
-    public createrAt: number,
-    public licenseAcceptedAt: number,
+    public readonly id: string,
+    public readonly email: string,
+    public readonly password: string,
+    public readonly allowances: UserAllowanceDTO[],
+    public readonly createdAt: number,
+    public readonly deletedAt: number | null,
+    public readonly licenseAcceptedAt: number | null,
   ) {}
 
-  static fromEntity(user: User) {
+  static fromEntity(user: User): UserDTO {
     return new UserDTO(
       user.id,
-      user.allowances.map(allowance => new AllowanceDTOShape(
-        allowance.allowanceCode,
-        allowance.allowanceExpiresAt?.getTime() ?? 0,
-        allowance.isUnlimited,
-        allowance.totalQuantity,
-        allowance.remainingQuantity
-      )),
       user.email.value,
+      user.password,
+      user.allowances.map(UserAllowanceDTO.fromAllowance),
       user.createdAt.getTime(),
-      user.licenseAcceptedAt?.getTime() ?? 0
-    );
+      user.deletedAt?.getTime() ?? null,
+      user.licenseAcceptedAt?.getTime() ?? null,
+    )
   }
 }

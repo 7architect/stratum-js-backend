@@ -48,8 +48,7 @@ export function printIntentsTable(intents: UploadIntentEntity[]): void {
 
     if (intent.uploadedFileId) {
       urlTable.push(
-        ['File ID', intent.uploadedFileId],
-        ['File URI', intent.uploadedFileUri ?? 'N/A']
+        ['File ID', intent.uploadedFileId]
       )
     }
 

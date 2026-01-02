@@ -1,107 +1,169 @@
-import { randomUUID } from 'crypto'
+type CreateParams = {
+  id: string
+  size: number
+  mimeType: string
+  storageKey: string
+  originalName: string
+  originalExtension: string
+  assetType?: string | null
+  customMetadata?: Record<string, any>
+  lastModified?: Date | null
+}
 
-import { type DomainEvent } from '../events/domain-event.interface'
-import { UploadFileCreatedEvent } from '../events/upload-file-created.event'
-import { UploadFileUploadedEvent } from '../events/upload-file-uploaded.event'
-import { UploadFileDeletedEvent } from '../events/upload-file-deleted.event'
+type FromPersistenceParams = {
+  id: string
+  size: number
+  mimeType: string
+  storageKey: string
+  originalName: string
+  originalExtension: string
+  assetType: string | null
+  customMetadata: Record<string, any>
+  createdAt: Date
+  deletedAt: Date | null
+  lastModified: Date | null
+}
 
 export class UploadFileEntity {
-  private events: DomainEvent[] = []
-
   private constructor(
-    public readonly id: string,
-    public uri: string,
-    public size: number,
-    public mimeType: string,
-    public readonly storageKey: string,
-    public readonly createdAt: Date,
-    public uploadedAt: Date | null,
-    public deletedAt: Date | null,
+    // Identity (immutable)
+    private readonly fileId: string,
+    private readonly fileStorageKey: string,
+    // Metadata (mutable)
+    private fileSize: number,
+    private fileMimeType: string,
+    private readonly fileOriginalName: string,
+    private readonly fileOriginalExtension: string,
+    private fileAssetType: string | null,
+    private fileCustomMetadata: Record<string, any>,
+    // Timestamps
+    private readonly fileCreatedAt: Date,
+    private fileDeletedAt: Date | null,
+    private fileLastModified: Date | null,
   ) {}
 
-  static create(params: {
-    id?: string
-    uri: string
-    size: number
-    mimeType: string
-    storageKey: string
-    createdAt?: Date
-  }): UploadFileEntity {
-    const file = new UploadFileEntity(
-      params.id ?? randomUUID(),
-      params.uri,
-      params.size,
-      params.mimeType,
-      params.storageKey,
-      params.createdAt ?? new Date(),
-      null,
-      null,
-    )
-
-    file.events.push(
-      new UploadFileCreatedEvent(
-        file.id,
-        file.uri,
-        file.size,
-        file.mimeType,
-        file.storageKey,
-      ),
-    )
-
-    return file
-  }
-
-  static fromPersistence(params: {
-    id: string
-    uri: string
-    size: number
-    mimeType: string
-    storageKey: string
-    createdAt: Date
-    uploadedAt: Date | null
-    deletedAt: Date | null
-  }): UploadFileEntity {
+  static create(params: CreateParams): UploadFileEntity {
+    const now = new Date()
+    const lastModified = params.lastModified ?? now
     return new UploadFileEntity(
-      params.id,
-      params.uri,
-      params.size,
-      params.mimeType,
-      params.storageKey,
-      params.createdAt,
-      params.uploadedAt,
-      params.deletedAt,
+      params.id,                          // fileId
+      params.storageKey,                  // fileStorageKey
+      params.size,                        // fileSize
+      params.mimeType,                    // fileMimeType
+      params.originalName,                // fileOriginalName
+      params.originalExtension,           // fileOriginalExtension
+      params.assetType ?? null,           // fileAssetType
+      params.customMetadata ?? {},        // fileCustomMetadata
+      now,                                // fileCreatedAt
+      null,                               // fileDeletedAt
+      lastModified,                       // fileLastModified
     )
   }
 
-  get isUploaded(): boolean {
-    return this.uploadedAt !== null
+  static fromPersistence(params: FromPersistenceParams): UploadFileEntity {
+    return new UploadFileEntity(
+      params.id,                // fileId
+      params.storageKey,        // fileStorageKey
+      params.size,              // fileSize
+      params.mimeType,          // fileMimeType
+      params.originalName,      // fileOriginalName
+      params.originalExtension, // fileOriginalExtension
+      params.assetType,         // fileAssetType
+      params.customMetadata,    // fileCustomMetadata
+      params.createdAt,         // fileCreatedAt
+      params.deletedAt,         // fileDeletedAt
+      params.lastModified,      // fileLastModified
+    )
   }
+
+  // ========================================
+  // Business Getters (Identity)
+  // ========================================
+
+  get id(): string {
+    return this.fileId
+  }
+
+  get storageKey(): string {
+    return this.fileStorageKey
+  }
+
+  // ========================================
+  // Business Getters (Metadata)
+  // ========================================
+
+  get size(): number {
+    return this.fileSize
+  }
+
+  get mimeType(): string {
+    return this.fileMimeType
+  }
+
+  get originalName(): string {
+    return this.fileOriginalName
+  }
+
+  get originalExtension(): string {
+    return this.fileOriginalExtension
+  }
+
+  get assetType(): string | null {
+    return this.fileAssetType
+  }
+
+  get customMetadata(): Record<string, any> {
+    return { ...this.fileCustomMetadata }
+  }
+
+  // ========================================
+  // Business Getters (Timestamps)
+  // ========================================
+
+  get createdAt(): Date {
+    return this.fileCreatedAt
+  }
+
+  get deletedAt(): Date | null {
+    return this.fileDeletedAt
+  }
+
+  get lastModified(): Date | null {
+    return this.fileLastModified
+  }
+
+  // ========================================
+  // Business Logic (State Checks)
+  // ========================================
 
   get isDeleted(): boolean {
-    return this.deletedAt !== null
+    return this.fileDeletedAt !== null
   }
 
-  updateMetadata(metadata: { uri?: string; size?: number; mimeType?: string }): void {
-    if (metadata.uri) {
-      this.uri = metadata.uri
-    }
+  // ========================================
+  // Business Operations
+  // ========================================
 
+  updateMetadata(metadata: { size?: number; mimeType?: string }): void {
     if (metadata.size !== undefined) {
-      this.size = metadata.size
+      this.fileSize = metadata.size
     }
 
     if (metadata.mimeType) {
-      this.mimeType = metadata.mimeType
+      this.fileMimeType = metadata.mimeType
     }
   }
 
-  markUploaded(date: Date = new Date()): void {
-    if (this.isDeleted) {
-      throw new Error('Cannot mark deleted file as uploaded')
-    }
+  updateCustomMetadata(metadata: Partial<Record<string, any>>): void {
+    this.fileCustomMetadata = { ...this.fileCustomMetadata, ...metadata }
+  }
 
-    this.uploadedAt = date
-    this.events.push(new UploadFileUploadedEvent(this.id, date))
+  setCustomMetadata(metadata: Record<string, any>): void {
+    this.fileCustomMetadata = metadata
+  }
+
+  setAssetType(assetType: string | null): void {
+    this.fileAssetType = assetType
   }
 
   delete(date: Date = new Date()): void {
@@ -109,13 +171,6 @@ export class UploadFileEntity {
       return
     }
 
-    this.deletedAt = date
-    this.events.push(new UploadFileDeletedEvent(this.id, date))
-  }
-
-  getUncommittedEvents(): DomainEvent[] {
-    const events = this.events
-    this.events = []
-    return events
+    this.fileDeletedAt = date
   }
 }

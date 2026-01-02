@@ -12,9 +12,17 @@ export class AuthService extends AuthServicePort {
     super(signer, passwordManager)
   }
 
-  issueTokens(sub: string) {
+  verifyToken(token: string) {
+    return this.signer.verify(token)
+  }
+
+  decodeToken<T extends { sub: string, [key:string]: any }>(token: string): T {
+    return this.signer.decode(token)
+  }
+
+  issueTokens(sub: string, payloadExtra: Record<string, any>) {
     const access = this.signer.sign(
-      { sub, type: 'access' },
+      { sub, type: 'access', ...payloadExtra },
       15 * 60
     )
 
@@ -29,12 +37,12 @@ export class AuthService extends AuthServicePort {
     }
   }
 
-  refreshTokens(refreshToken: RefreshToken, sub: string) {
+  refreshTokens(refreshToken: RefreshToken, sub: string, payloadExtra: Record<string, any>) {
     if (refreshToken.isExpired) {
       throw new Error('Refresh token has expired')
     }
 
-    return this.issueTokens(sub)
+    return this.issueTokens(sub, payloadExtra)
   }
 
   override generatePasswordHash(password: string): Promise<string> {
