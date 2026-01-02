@@ -1,3 +1,5 @@
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=7architectstratum-js-backend)
+
 > ⚠️ You can use but this is in draft and untested now
 
 # backend-fastify
