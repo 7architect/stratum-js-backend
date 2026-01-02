@@ -59,6 +59,11 @@ const BadRequestSchema = z.object({
   message: z.string(),
 })
 
+const UnauthorizedResponseSchema = z.object({
+  error: z.literal('Unauthorized'),
+  message: z.string(),
+})
+
 export async function authRoutes(fastify: FastifyInstance) {
   // Sign-up endpoint (public)
   fastify.post<{ Body: z.infer<typeof SignUpBodySchema> }>('/auth/sign-up', {
@@ -96,7 +101,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       body: SignInBodySchema,
       response: {
         200: AuthTokenResponseSchema,
-        401: BadRequestSchema,
+        400: BadRequestSchema,
+        401: UnauthorizedResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -125,6 +131,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: AuthTokenResponseSchema,
         400: BadRequestSchema,
+        401: UnauthorizedResponseSchema,
       },
     },
   }, async (request, reply) => {
@@ -135,7 +142,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     const result = await refreshSession(request.body.refreshToken)
 
     if (!result) {
-      return reply.code(400).send({ error: 'Bad Request', message: 'Invalid refresh token' })
+      return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid refresh token' })
     }
 
     return reply.code(200).send({
@@ -154,6 +161,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       response: {
         200: CurrentUserResponseSchema,
+        401: UnauthorizedResponseSchema,
       },
     },
   }, async (request, reply) => {

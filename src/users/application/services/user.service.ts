@@ -158,6 +158,11 @@ export class UserService extends UserServicePort {
     for (let i = 0; i < allowanceCodes.length; i++) {
       const code = allowanceCodes[i]
       const quantity = quantities[i] || 1
+      // TODO: validate allowance code
+      if (!code) {
+        throw new Error('Allowance code is required')
+      }
+
       user.consumeAllowance(code, quantity)
     }
 
