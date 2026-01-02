@@ -1,3 +1,5 @@
+⚠️ Proprietary software. Unauthorized use is strictly prohibited.
+
 # backend-fastify
 
 To install dependencies:
